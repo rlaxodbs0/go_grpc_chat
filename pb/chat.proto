@@ -1,0 +1,33 @@
+//go:generate protoc -I/usr/local/include -I.   -I$GOPATH/src   --go_out=plugins=grpc:.   *.proto
+
+syntax = "proto3";
+
+package pb;
+
+import "google/protobuf/timestamp.proto";
+
+enum ResponseType {
+    SUCCESS = 0;
+    FAIL = 1;
+}
+
+service chat_task {
+    rpc TransferMessage(stream Message) returns (stream Message) {}
+    rpc login(UserInfo) returns (LoginResponse) {}
+}
+
+message Message{
+    string Sender = 1;
+    string Receiver = 2;
+    string Text = 3;
+    google.protobuf.Timestamp CreatedAt = 9;
+}
+
+message UserInfo{
+    string UserName = 1;
+    string Password = 2;
+}
+
+message LoginResponse {
+    ResponseType Response = 1;
+}
