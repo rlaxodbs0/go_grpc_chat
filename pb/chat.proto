@@ -13,7 +13,9 @@ enum ResponseType {
 
 service chat_task {
     rpc TransferMessage(stream Message) returns (stream Message) {}
-    rpc login(UserInfo) returns (LoginResponse) {}
+    rpc Login(UserInfo) returns (LoginResponse) {}
+    rpc Logout(UserInfo) returns (LogoutResponse) {}
+    rpc Search(UserInfo) returns (UserList) {}
 }
 
 message Message{
@@ -30,4 +32,12 @@ message UserInfo{
 
 message LoginResponse {
     ResponseType Response = 1;
+}
+
+message LogoutResponse {
+    ResponseType Response = 1;
+}
+
+message UserList{
+   map<string, string> UserNameActiveMap = 1;
 }
