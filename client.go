@@ -55,6 +55,7 @@ func session(c pb.ChatTaskClient) {
 			}
 			log.Printf("Greeting: %s", r.Response)
 		} else {
+			fmt.Println("error occur")
 			break
 		}
 	}
