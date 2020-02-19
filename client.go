@@ -23,7 +23,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
+	_"os"
 	"time"
 
 	"google.golang.org/grpc"
@@ -35,12 +35,27 @@ const (
 	defaultName = "world"
 )
 
-func session() {
+
+func session(c pb.ChatTaskClient) {
 	var cmdString string
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	for {
 		fmt.Print("GRPCHAT >> ")
 		fmt.Scanln(&cmdString)
 		if cmdString == "exit" {
+			break
+		}
+		if cmdString == "login" {
+			fmt.Print("UserName: ")
+			fmt.Scanln(&cmdString)
+			r, err := c.Login(ctx, &pb.UserInfo{UserName: cmdString, Password: "ppap"})
+			if err != nil {
+				log.Fatalf("could not greet: %v", err)
+			}
+			log.Printf("Greeting: %s", r.Response)
+		} else {
+			fmt.Println("error occur! bye")
 			break
 		}
 	}
@@ -53,15 +68,6 @@ func main() {
 	}
 	defer conn.Close()
 	c := pb.NewChatTaskClient(conn)
-	name := defaultName
-	if len(os.Args) > 1 {
-		name = os.Args[1]
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	r, err := c.Login(ctx, &pb.UserInfo{UserName: name, Password: "ppap"})
-	if err != nil {
-		log.Fatalf("could not greet: %v", err)
-	}
-	log.Printf("Greeting: %s", r.Response)
+	session(c)
+
 }
