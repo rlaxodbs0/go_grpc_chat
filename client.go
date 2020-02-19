@@ -54,6 +54,8 @@ func session(c pb.ChatTaskClient) {
 				log.Fatalf("could not greet: %v", err)
 			}
 			log.Printf("Greeting: %s", r.Response)
+		} else {
+			break
 		}
 	}
 }
