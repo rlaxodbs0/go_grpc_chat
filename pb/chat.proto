@@ -9,13 +9,16 @@ import "google/protobuf/timestamp.proto";
 enum ResponseType {
     SUCCESS = 0;
     FAIL = 1;
+    ALREADYEXISTS = 2;
+    NOMATCH = 3;
 }
 
 service chat_task {
-    rpc TransferMessage(stream Message) returns (stream Message) {}
+    rpc Signup(UserInfo) returns (SignupResponse) {}
     rpc Login(UserInfo) returns (LoginResponse) {}
     rpc Logout(UserInfo) returns (LogoutResponse) {}
     rpc Search(UserInfo) returns (UserList) {}
+    rpc ChatMessage(stream Message) returns (stream Message) {}
 }
 
 message Message{
@@ -35,6 +38,10 @@ message LoginResponse {
 }
 
 message LogoutResponse {
+    ResponseType Response = 1;
+}
+
+message SignupResponse {
     ResponseType Response = 1;
 }
 
