@@ -17,32 +17,34 @@ const (
 )
 
 var cmdString string
-cmdStringMap := map[string]interface{} {
-	"login": login,
-	"logout": logout,
-	"signup": signup,
-}
+
 
 func session(c pb.ChatTaskClient) {
+	cmdStringMap := map[string]interface{} {
+		"login": login,
+		"logout": logout,
+		"signup": signup,
+	}
 	for {
-		fmt.scanf("GRPCHAT >>>  %s")
-		if cmdString == "login" {
-			fmt.Print("UserName: ")
-			fmt.Scanln(&cmdString)
-			log.Printf("Greeting: %s", r.Response)
-		} else {
-			fmt.Println("error occur! bye")
+		fmt.Printf("GRPCHAT >>> ")
+		fmt.Scanln(&cmdString)
+		v, exists := cmdStringMap[cmdString]
+		if !exists {
+			log.Printf("%v is invalid command", cmdString)
 			break
 		}
+		v.(func(pb.ChatTaskClient))(c)
 	}
 }
 
-func signup(c pb.ChatTaskClient) error {
+func signup(c pb.ChatTaskClient) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	var username, password string
-	fmt.Scanf("username: %s\n", &username)
-	fmt.Scanf("password: %s\n", &password)
+	fmt.Printf("username: ")
+	fmt.Scanln(&username)
+	fmt.Printf("password: ")
+	fmt.Scanln(&password)
 	r, err := c.Signup(ctx, &pb.UserInfo{UserName: username, Password: password})
 	if err != nil {
 		log.Fatalf("%v occured", err)
@@ -51,16 +53,17 @@ func signup(c pb.ChatTaskClient) error {
 		log.Printf("%s already exists\n", username)
 	}
 	log.Printf("Thank you for signup! %s\n", username)
-	return err
 }
 
 
-func login(c pb.ChatTaskClient) error {
+func login(c pb.ChatTaskClient)  {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	var username, password string
-	fmt.Scanf("username: %s\n", &username)
-	fmt.Scanf("password: %s\n", &password)
+	fmt.Printf("username: ")
+	fmt.Scanln(&username)
+	fmt.Printf("password: ")
+	fmt.Scanln(&password)
 	r, err := c.Login(ctx, &pb.UserInfo{UserName: username, Password: password})
 	if err != nil {
 		log.Fatalf("%v occured", err)
@@ -69,21 +72,21 @@ func login(c pb.ChatTaskClient) error {
 		log.Printf("There is no match username %s and password\n", username)
 	}
 	log.Printf("Welcome! %s\n", username)
-	return err
 }
 
-func logout(c pb.ChatTaskClient) error{
+func logout(c pb.ChatTaskClient) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	var username, password string
-	fmt.Scanf("username: %s\n", &username)
-	fmt.Scanf("password: %s\n", &password)
+	fmt.Printf("username: ")
+	fmt.Scanln(&username)
+	fmt.Printf("password: ")
+	fmt.Scanln(&password)
 	_, err := c.Login(ctx, &pb.UserInfo{UserName: username, Password: password})
 	if err != nil {
 		log.Fatalf("%v occured", err)
 	}
 	log.Printf("Goodbye! %s\n", username)
-	return err
 }
 
 func main() {
