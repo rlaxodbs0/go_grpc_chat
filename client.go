@@ -1,22 +1,4 @@
-/*
- *
- * Copyright 2015 gRPC authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
 
-// Package main implements a client for Greeter service.
 package main
 
 import (
@@ -32,33 +14,79 @@ import (
 
 const (
 	address     = "localhost:50051"
-	defaultName = "world"
 )
+
+var cmdString string
 
 
 func session(c pb.ChatTaskClient) {
-	var cmdString string
+	cmdStringMap := map[string]interface{} {
+		"login": login,
+		"logout": logout,
+		"signup": signup,
+	}
+	for {
+		fmt.Printf("GRPCHAT >>> ")
+		fmt.Scanln(&cmdString)
+		v, exists := cmdStringMap[cmdString]
+		if !exists {
+			log.Printf("%v is invalid command", cmdString)
+			break
+		}
+		v.(func(pb.ChatTaskClient))(c)
+	}
+}
+
+func signup(c pb.ChatTaskClient) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+	defer cancel()
+	var username, password string
+	fmt.Printf("username: ")
+	fmt.Scanln(&username)
+	fmt.Printf("password: ")
+	fmt.Scanln(&password)
+	r, err := c.Signup(ctx, &pb.UserInfo{UserName: username, Password: password})
+	if err != nil {
+		log.Fatalf("%v occured", err)
+	}
+	if r.Response == pb.ResponseType_ALREADYEXISTS {
+		log.Printf("%s already exists\n", username)
+	}
+	log.Printf("Thank you for signup! %s\n", username)
+}
+
+
+func login(c pb.ChatTaskClient)  {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	for {
-		fmt.Print("GRPCHAT >> ")
-		fmt.Scanln(&cmdString)
-		if cmdString == "exit" {
-			break
-		}
-		if cmdString == "login" {
-			fmt.Print("UserName: ")
-			fmt.Scanln(&cmdString)
-			r, err := c.Login(ctx, &pb.UserInfo{UserName: cmdString, Password: "ppap"})
-			if err != nil {
-				log.Fatalf("could not greet: %v", err)
-			}
-			log.Printf("Greeting: %s", r.Response)
-		} else {
-			fmt.Println("error occur! bye")
-			break
-		}
+	var username, password string
+	fmt.Printf("username: ")
+	fmt.Scanln(&username)
+	fmt.Printf("password: ")
+	fmt.Scanln(&password)
+	r, err := c.Login(ctx, &pb.UserInfo{UserName: username, Password: password})
+	if err != nil {
+		log.Fatalf("%v occured", err)
 	}
+	if r.Response == pb.ResponseType_NOMATCH {
+		log.Printf("There is no match username %s and password\n", username)
+	}
+	log.Printf("Welcome! %s\n", username)
+}
+
+func logout(c pb.ChatTaskClient) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	var username, password string
+	fmt.Printf("username: ")
+	fmt.Scanln(&username)
+	fmt.Printf("password: ")
+	fmt.Scanln(&password)
+	_, err := c.Login(ctx, &pb.UserInfo{UserName: username, Password: password})
+	if err != nil {
+		log.Fatalf("%v occured", err)
+	}
+	log.Printf("Goodbye! %s\n", username)
 }
 
 func main() {
@@ -69,5 +97,4 @@ func main() {
 	defer conn.Close()
 	c := pb.NewChatTaskClient(conn)
 	session(c)
-
 }

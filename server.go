@@ -13,27 +13,37 @@ const (
 	port = ":50051"
 )
 
-var user map[string]string
+var userInfo map[string]string
+var userStatus map[string]string
 
 type server struct {
 	pb.UnimplementedChatTaskServer
 }
 
+func (s *server) Signup(ctx context.Context, info *pb.UserInfo) (*pb.SignupResponse, error){
+	_, exists := userInfo[info.UserName]
+	if !exists {
+		return &pb.SignupResponse{Response: pb.ResponseType_ALREADYEXISTS}, nil
+	}
+	userInfo[info.UserName] = info.Password
+	return &pb.SignupResponse{Response:pb.ResponseType_SUCCESS}, nil
+}
+
 func (s *server) Login(ctx context.Context, info *pb.UserInfo) (*pb.LoginResponse, error) {
 	log.Printf("User Login: %v",info.UserName)
-	user[info.UserName] = "Active"
+	userStatus[info.UserName] = "Active"
 	return &pb.LoginResponse{Response: pb.ResponseType_SUCCESS}, nil
 }
 
 func (s *server) Logout(ctx context.Context, info *pb.UserInfo) (*pb.LogoutResponse, error) {
-	log.Printf("User Login: %v",info.UserName)
-	delete(user, info.UserName)
+	log.Printf("User Logout: %v",info.UserName)
+	userStatus[info.UserName] = "Inactive"
 	return &pb.LogoutResponse{Response: pb.ResponseType_SUCCESS}, nil
 }
 
 func (s * server) Search(ctx context.Context, info *pb.UserInfo) (*pb.UserList, error) {
 	log.Printf("User Search: %v",info.UserName)
-	return &pb.UserList{UserNameActiveMap: user}, nil
+	return &pb.UserList{UserNameActiveMap: userStatus}, nil
 }
 
 func main() {
