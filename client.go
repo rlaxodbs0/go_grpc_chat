@@ -38,7 +38,7 @@ func session(c pb.ChatTaskClient) {
 }
 
 func signup(c pb.ChatTaskClient) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
 	defer cancel()
 	var username, password string
 	fmt.Printf("username: ")
