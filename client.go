@@ -24,6 +24,7 @@ func session(c pb.ChatTaskClient) {
 		"login": login,
 		"logout": logout,
 		"signup": signup,
+		"search": search,
 	}
 	for {
 		fmt.Printf("GRPCHAT >>> ")
@@ -38,13 +39,13 @@ func session(c pb.ChatTaskClient) {
 }
 
 func signup(c pb.ChatTaskClient) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
-	defer cancel()
 	var username, password string
 	fmt.Printf("username: ")
 	fmt.Scanln(&username)
 	fmt.Printf("password: ")
 	fmt.Scanln(&password)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	r, err := c.Signup(ctx, &pb.UserInfo{UserName: username, Password: password})
 	if err != nil {
 		log.Fatalf("%v occured", err)
@@ -57,36 +58,50 @@ func signup(c pb.ChatTaskClient) {
 
 
 func login(c pb.ChatTaskClient)  {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 	var username, password string
 	fmt.Printf("username: ")
 	fmt.Scanln(&username)
 	fmt.Printf("password: ")
 	fmt.Scanln(&password)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	r, err := c.Login(ctx, &pb.UserInfo{UserName: username, Password: password})
 	if err != nil {
 		log.Fatalf("%v occured", err)
 	}
 	if r.Response == pb.ResponseType_NOMATCH {
 		log.Printf("There is no match username %s and password\n", username)
+	} else if r.Response == pb.ResponseType_SUCCESS {
+		log.Printf("Welcome! %s\n", username)
 	}
-	log.Printf("Welcome! %s\n", username)
 }
 
 func logout(c pb.ChatTaskClient) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 	var username, password string
 	fmt.Printf("username: ")
 	fmt.Scanln(&username)
 	fmt.Printf("password: ")
 	fmt.Scanln(&password)
-	_, err := c.Login(ctx, &pb.UserInfo{UserName: username, Password: password})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	r, err := c.Logout(ctx, &pb.UserInfo{UserName: username, Password: password})
 	if err != nil {
 		log.Fatalf("%v occured", err)
 	}
-	log.Printf("Goodbye! %s\n", username)
+	if r.Response == pb.ResponseType_SUCCESS {
+		log.Printf("Goodbye! %s\n", username)
+	}
+}
+
+func search(c pb.ChatTaskClient) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	r, err := c.Search(ctx, &pb.UserInfo{UserName: "temp", Password: "temp"})
+	if err != nil {
+		log.Fatalf("%v occured", err)
+	}
+	log.Printf("Goodbye! %s\n", r.UserNameActiveMap)
+
 }
 
 func main() {
