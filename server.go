@@ -5,8 +5,8 @@ import (
 	"log"
 	"net"
 
-	"google.golang.org/grpc"
 	pb "go_grpc_chat/pb"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -15,6 +15,8 @@ const (
 
 var userInfo map[string]string
 var userStatus map[string]string
+var userInviteSession map[string]pb.ChatTask_GetInviteNotifyServer
+var userChatSession map[string]pb.ChatTask_ChatMessageServer
 
 type server struct {
 	pb.UnimplementedChatTaskServer
@@ -22,14 +24,19 @@ type server struct {
 
 func (s *server) Signup(ctx context.Context, info *pb.UserInfo) (*pb.SignupResponse, error){
 	_, exists := userInfo[info.UserName]
-	if !exists {
+	if exists {
 		return &pb.SignupResponse{Response: pb.ResponseType_ALREADYEXISTS}, nil
 	}
 	userInfo[info.UserName] = info.Password
+	log.Printf("User Signup: %v",info.UserName)
 	return &pb.SignupResponse{Response:pb.ResponseType_SUCCESS}, nil
 }
 
 func (s *server) Login(ctx context.Context, info *pb.UserInfo) (*pb.LoginResponse, error) {
+	_, exists := userInfo[info.UserName]
+	if !exists {
+		return &pb.LoginResponse{Response: pb.ResponseType_NOMATCH}, nil
+	}
 	log.Printf("User Login: %v",info.UserName)
 	userStatus[info.UserName] = "Active"
 	return &pb.LoginResponse{Response: pb.ResponseType_SUCCESS}, nil
@@ -46,7 +53,27 @@ func (s * server) Search(ctx context.Context, info *pb.UserInfo) (*pb.UserList, 
 	return &pb.UserList{UserNameActiveMap: userStatus}, nil
 }
 
+func (s * server) GetInviteNotify(info * pb.UserInfo, stream pb.ChatTask_GetInviteNotifyServer) error {
+	userInviteSession[info.UserName] = stream
+	for{}
+}
+
+func (s * server) Invite(ctx context.Context, info *pb.InviteInfo) (*pb.InviteResponse, error) {
+	log.Printf("%v invites %v", info.Sender, info.Receiver)
+	userInviteSession[info.Receiver].Send(&pb.UserInfo{UserName:info.Sender})
+	return &pb.InviteResponse{Response: pb.ResponseType_SUCCESS}, nil
+}
+/*
+func (s * server) ChatMessage(ctx context.Context, info *pb.UserInfo) (*pb.UserList, error) {
+	log.Printf("User Search: %v",info.UserName)
+	return &pb.UserList{UserNameActiveMap: userStatus}, nil
+}*/
+
 func main() {
+	userInfo = make(map[string]string)
+	userStatus = make(map[string]string)
+	userInviteSession = make(map[string]pb.ChatTask_GetInviteNotifyServer)
+	//userStatus = make(map[string]pb.ChatTask_GetInviteNotifyServer)
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
