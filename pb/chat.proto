@@ -18,6 +18,8 @@ service chat_task {
     rpc Login(UserInfo) returns (LoginResponse) {}
     rpc Logout(UserInfo) returns (LogoutResponse) {}
     rpc Search(UserInfo) returns (UserList) {}
+    rpc Invite(InviteInfo) returns (InviteResponse) {}
+    rpc GetInviteNotify(UserInfo) returns (stream UserInfo) {}
     rpc ChatMessage(stream Message) returns (stream Message) {}
 }
 
@@ -33,6 +35,11 @@ message UserInfo{
     string Password = 2;
 }
 
+message InviteInfo{
+    string Sender = 1;
+    string Receiver = 2;
+}
+
 message LoginResponse {
     ResponseType Response = 1;
 }
@@ -42,6 +49,10 @@ message LogoutResponse {
 }
 
 message SignupResponse {
+    ResponseType Response = 1;
+}
+
+message InviteResponse {
     ResponseType Response = 1;
 }
 
