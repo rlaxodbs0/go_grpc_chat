@@ -25,6 +25,7 @@ func session(c pb.ChatTaskClient) {
 		"signup": signup,
 		"search": search,
 		"invite": invite,
+		"chat": chatMessage,
 	}
 	for {
 		fmt.Printf("GRPCHAT >>> ")
@@ -128,8 +129,30 @@ func getInviteNotify(c pb.ChatTaskClient, username string){
 		log.Fatalf("%v occured", err)
 	}
 	for {
-		resp, _ := stream.Recv()
+		resp, _	 := stream.Recv()
 		log.Print(resp.UserName, "invites you y/n")
+	}
+
+}
+
+func chatMessage(c pb.ChatTaskClient){
+	var username, password, text string
+	fmt.Printf("username: ")
+	fmt.Scanln(&username)
+	fmt.Printf("invite username: ")
+	fmt.Scanln(&password)
+	ctx, cancel := context.WithTimeout(context.Background(), 1000 * time.Second)
+	defer cancel()
+	stream, err := c.ChatMessage(ctx)
+	if err != nil {
+		log.Fatalf("%v occured", err)
+	}
+	for {
+		fmt.Printf("TEXT: ")
+		fmt.Scanln(&text)
+		stream.Send(&pb.Message{Sender:username, Receiver:password, Text: text})
+		resp, _	 := stream.Recv()
+		log.Print(resp.Text, "from ", resp.Sender)
 	}
 
 }
