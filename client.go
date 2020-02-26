@@ -128,7 +128,7 @@ func getInviteNotify(c pb.ChatTaskClient, username string){
 		log.Fatalf("%v occured", err)
 	}
 	for {
-		resp, _ := stream.Recv()
+		resp, _	 := stream.Recv()
 		log.Print(resp.UserName, "invites you y/n")
 	}
 

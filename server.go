@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 
@@ -55,11 +56,13 @@ func (s * server) Search(ctx context.Context, info *pb.UserInfo) (*pb.UserList, 
 
 func (s * server) GetInviteNotify(info * pb.UserInfo, stream pb.ChatTask_GetInviteNotifyServer) error {
 	userInviteSession[info.UserName] = stream
+	fmt.Print(userInviteSession)
 	for{}
 }
 
 func (s * server) Invite(ctx context.Context, info *pb.InviteInfo) (*pb.InviteResponse, error) {
 	log.Printf("%v invites %v", info.Sender, info.Receiver)
+	fmt.Print(userInviteSession)
 	userInviteSession[info.Receiver].Send(&pb.UserInfo{UserName:info.Sender})
 	return &pb.InviteResponse{Response: pb.ResponseType_SUCCESS}, nil
 }
@@ -70,7 +73,7 @@ func (s * server) ChatMessage(ctx context.Context, info *pb.UserInfo) (*pb.UserL
 }*/
 
 func main() {
-	userInfo = make(map[string]string)
+	userInfo = map[string]string{"1":"1", "2":"2"}
 	userStatus = make(map[string]string)
 	userInviteSession = make(map[string]pb.ChatTask_GetInviteNotifyServer)
 	//userStatus = make(map[string]pb.ChatTask_GetInviteNotifyServer)
