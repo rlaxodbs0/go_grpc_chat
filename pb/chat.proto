@@ -18,9 +18,7 @@ service chat_task {
     rpc Login(UserInfo) returns (LoginResponse) {}
     rpc Logout(UserInfo) returns (LogoutResponse) {}
     rpc Search(UserInfo) returns (UserList) {}
-    rpc Invite(InviteInfo) returns (InviteResponse) {}
-    rpc GetInviteNotify(UserInfo) returns (stream UserInfo) {}
-    rpc ChatMessage(stream Message) returns (stream Message) {}
+    rpc Chat(stream Message) returns (stream Message) {}
 }
 
 message Message{
