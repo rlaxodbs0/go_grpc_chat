@@ -83,8 +83,8 @@ func (cl *Client) login()  {
 		log.Printf("Welcome! %s\n", username)
 		cl.username = username
 		cl.password = password
+		cl.chatSession(ctx)
 	}
-	cl.chatSession(ctx)
 }
 
 func (cl *Client) logout() {
@@ -104,8 +104,8 @@ func (cl *Client) logout() {
 	}
 }
 
-func (cl *Client)chatSession(ctx context.Context) error{
-	ctx, cancel := context.WithCancel(ctx)
+func (cl *Client)chatSession(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 	stream, err := cl.ChatTaskClient.Chat(ctx)
 	if err != nil {
@@ -113,7 +113,8 @@ func (cl *Client)chatSession(ctx context.Context) error{
 	}
 	defer stream.CloseSend()
 	go cl.send(stream)
-	return cl.receive(stream)
+	go cl.receive(stream)
+	for {}
 }
 
 func (cl *Client)send (stream pb.ChatTask_ChatClient) {
@@ -127,14 +128,16 @@ func (cl *Client)send (stream pb.ChatTask_ChatClient) {
 			fmt.Println("client send loop disconnected")
 		default:
 			if sc.Scan() {
+				msg := sc.Text()
 				if err := stream.Send(&pb.Message{Username: cl.username,
 					Event: &pb.Message_BroadcastMessage_{
-						BroadcastMessage: &pb.Message_BroadcastMessage{Message:sc.Text()}}}); err != nil {
-					return
+						BroadcastMessage: &pb.Message_BroadcastMessage{Message:msg}}}); err != nil {
+							return
 				}
 			}
 		}
 	}
+
 }
 
 
@@ -148,7 +151,6 @@ func (cl *Client) receive(stream pb.ChatTask_ChatClient) error {
 		} else if err != nil {
 			return err
 		}
-
 		switch evt := res.Event.(type) {
 		case *pb.Message_BroadcastMessage_:
 			log.Printf("BROADCAST %v %v", res.Username, evt.BroadcastMessage.Message)

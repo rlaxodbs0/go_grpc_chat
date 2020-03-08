@@ -35,17 +35,19 @@ func (s *ChatApplictaion) Search(in *pb.UserInfo) *pb.LogoutResponse{
 */
 func (s *ChatApplictaion) Chat(stream pb.ChatTask_ChatServer) error {
 	req, _:= stream.Recv()
-	fmt.Println(req)
 	_, ok := s.userSession.Load(req.Username); if !ok{
 		s.userSession.Store(req.Username, stream)
 	}
 	defer s.closeStream(req.Username)
+
+	go s.Broadcast(stream)
 	for{
 		req, err := stream.Recv()
-		if err == io.EOF {
-			break
+		if s, ok := status.FromError(err); ok && s.Code() == codes.Canceled {
+			return nil
+		} else if err == io.EOF {
+			return nil
 		} else if err != nil {
-			fmt.Println("BROADCAST1")
 			return err
 		}
 		switch evt := req.Event.(type) {
@@ -60,7 +62,6 @@ func (s *ChatApplictaion) Chat(stream pb.ChatTask_ChatServer) error {
 			s.inviteMessage <- req
 		default:
 			log.Printf("%v", evt)
-			return nil
 		}
 	}
 	<-stream.Context().Done()
@@ -71,13 +72,11 @@ func (s *ChatApplictaion) Broadcast(stream pb.ChatTask_ChatServer){
 	for {
 		select {
 		case <-stream.Context().Done():
-			fmt.Println("BROADCAST1")
 			return
 		case res := <- s.broadcast:
 			if r, ok := status.FromError(stream.Send(res)); ok {
 				switch r.Code() {
 				case codes.OK:
-					fmt.Println("BROADCAST")
 					s.userSession.Range(func(k, session interface{}) bool {
 						session.(pb.ChatTask_ChatServer).Send(res)
 						return true
