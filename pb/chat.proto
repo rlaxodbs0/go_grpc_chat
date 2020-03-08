@@ -14,46 +14,55 @@ enum ResponseType {
 }
 
 service chat_task {
-    rpc Signup(UserInfo) returns (SignupResponse) {}
+    rpc SignUp(UserInfo) returns (SignupResponse) {}
     rpc Login(UserInfo) returns (LoginResponse) {}
     rpc Logout(UserInfo) returns (LogoutResponse) {}
     rpc Search(UserInfo) returns (UserList) {}
     rpc Chat(stream Message) returns (stream Message) {}
 }
 
-message Message{
-    string Sender = 1;
-    string Receiver = 2;
-    string Text = 3;
-    google.protobuf.Timestamp CreatedAt = 9;
-}
-
 message UserInfo{
-    string UserName = 1;
-    string Password = 2;
-}
-
-message InviteInfo{
-    string Sender = 1;
-    string Receiver = 2;
+    string username = 1;
+    string password = 2;
 }
 
 message LoginResponse {
-    ResponseType Response = 1;
+    ResponseType response = 1;
 }
 
 message LogoutResponse {
-    ResponseType Response = 1;
+    ResponseType response = 1;
 }
 
 message SignupResponse {
-    ResponseType Response = 1;
+    ResponseType response = 1;
 }
 
-message InviteResponse {
-    ResponseType Response = 1;
+
+message Message{
+    google.protobuf.Timestamp timestamp = 1;
+    string username = 2;
+
+    oneof event {
+        Message  chat_message  = 3;
+        InviteMessage invite_message = 4;
+        BroadcastMessage broadcast_message = 5;
+    }
+
+    message Message {
+        string chat_group = 2;
+        string message = 3;
+    }
+
+    message InviteMessage {
+        string target_username = 2;
+    }
+
+    message BroadcastMessage {
+        string message = 2;
+    }
 }
 
 message UserList{
-   map<string, string> UserNameActiveMap = 1;
+    map<string, string> UserNameActiveMap = 1;
 }
