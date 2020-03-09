@@ -105,7 +105,7 @@ func (cl *Client) logout() {
 }
 
 func (cl *Client)chatSession(ctx context.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	stream, err := cl.ChatTaskClient.Chat(ctx)
 	if err != nil {
@@ -149,6 +149,7 @@ func (cl *Client) receive(stream pb.ChatTask_ChatClient) error {
 		} else if err == io.EOF {
 			return nil
 		} else if err != nil {
+			log.Println(err)
 			return err
 		}
 		switch evt := res.Event.(type) {
