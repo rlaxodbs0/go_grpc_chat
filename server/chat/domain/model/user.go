@@ -2,31 +2,22 @@ package model
 
 import (
 	"go_grpc_chat/pb"
+	"time"
 )
 
 type User struct {
-	Session pb.ChatTask_ChatServer
-	HostIP string
+	ID uint64
 	Username string
 	Password string
-	Sex string
-	ChatGroupList []*ChatGroup
-	Status
+	GroupIDSlice []uint64
+	FriendIDSlice []uint64
+	*Status
+	Session pb.ChatTask_ChatServer
 }
 
-func (c *User) GetUsername() string {
-	return c.Username
-}
-
-func (c *User) GetHostIP() string {
-	return c.HostIP
-}
-
-func (c *User) GetChatGroupList() []*ChatGroup {
-	return c.ChatGroupList
-}
-
-func (c *User) GetChatSession() pb.ChatTask_ChatServer {
-	return c.Session
+type Status struct {
+	Active bool
+	LoginTime time.Time
+	LogoutTime time.Time
 }
 

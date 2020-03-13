@@ -1,6 +1,8 @@
 package model
 
-type ChatGroup struct {
-	name string
+type Group struct {
+	ID uint64
+	Name string
 	UsernameList []string
+	Chat *[]Chat
 }

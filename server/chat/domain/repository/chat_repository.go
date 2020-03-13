@@ -7,6 +7,7 @@ import (
 )
 
 type ChatRepositoryImpl interface  {
+	GetUserByUsername(username string) *model.User
 	SignUp(user *model.User) *pb.SignupResponse
 	Login(user *model.User) *pb.LoginResponse
 	Logout(user *model.User) *pb.LogoutResponse

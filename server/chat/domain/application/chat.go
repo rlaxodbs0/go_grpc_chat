@@ -3,6 +3,7 @@ package application
 import (
 	"fmt"
 	"go_grpc_chat/pb"
+	"go_grpc_chat/server/chat/domain/model"
 	"go_grpc_chat/server/chat/domain/repository"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,7 +16,7 @@ type ChatApplictaion struct{
 	broadcast chan *pb.Message
 	inviteMessage chan *pb.Message
 	message chan *pb.Message
-	userSession sync.Map
+	userSession sync.Map  // username - *model.user
 	repository repository.ChatRepositoryImpl
 }
 
@@ -28,11 +29,19 @@ func InitChatApplictaion(repo repository.ChatRepositoryImpl) *ChatApplictaion{
 		userSession:sync.Map{},
 		repository: repo}
 }
-/*
-func (s *ChatApplictaion) Search(in *pb.UserInfo) *pb.LogoutResponse{
-	return s.repository.Logout(&model.User{Username:in.Username, Password:in.Password})
+
+func (s *ChatApplictaion) Search(in *pb.UserInfo) map[string]string{
+	userMap := map[string]string{}
+	s.userSession.Range(func(k, session interface{}) bool {
+		if session.(*model.User).Active {
+			userMap[session.(*model.User).Username] = fmt.Sprintf("Login at %s", session.(*model.User).LoginTime)
+		}
+		return true
+	})
+	return userMap
 }
-*/
+
+
 func (s *ChatApplictaion) Chat(stream pb.ChatTask_ChatServer) error {
 	req, _:= stream.Recv()
 	_, ok := s.userSession.Load(req.Username); if !ok{
@@ -58,7 +67,7 @@ func (s *ChatApplictaion) Chat(stream pb.ChatTask_ChatServer) error {
 			log.Printf("%v", req.Username)
 			s.message <- req
 		case *pb.Message_InviteMessage_:
-			log.Printf("%v", req.Username)
+			log.Printf("Invite: %v", req.Username)
 			s.inviteMessage <- req
 		default:
 			log.Printf("%v", evt)
@@ -71,21 +80,20 @@ func (s *ChatApplictaion) Chat(stream pb.ChatTask_ChatServer) error {
 func (s *ChatApplictaion) Broadcast(stream pb.ChatTask_ChatServer){
 	for {
 		select {
-		case <-stream.Context().Done():
+		case <- stream.Context().Done():
 			return
 		case res := <- s.broadcast:
 			if r, ok := status.FromError(stream.Send(res)); ok {
 				switch r.Code() {
 				case codes.OK:
 					s.userSession.Range(func(k, session interface{}) bool {
-						session.(pb.ChatTask_ChatServer).Send(res)
+						session.(*model.User).Session.Send(res)
 						return true
 					})
 				case codes.Unavailable, codes.Canceled, codes.DeadlineExceeded:
 					log.Printf("client (%s) terminated connection", res.Username)
 					return
 				default:
-					fmt.Println("BROADCAST3")
 					return
 				}
 			}

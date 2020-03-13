@@ -43,10 +43,10 @@ func (s *ChatServer) Logout(ctx context.Context, info *pb.UserInfo) (*pb.LogoutR
 	return s.app.AuthApplictaion.Logout(info), nil
 }
 
-/*func (s * ChatServer) Search(ctx context.Context, info *pb.UserInfo) (*pb.UserList, error) {
-	return &pb.UserList{UserNameActiveMap: userStatus}, nil
+func (s * ChatServer) Search(ctx context.Context, info *pb.UserInfo) (*pb.UserList, error) {
+	return &pb.UserList{UserNameActiveMap: s.app.Search(info)}, nil
 }
-*/
+
 func (s * ChatServer) Chat(stream pb.ChatTask_ChatServer) error {
 	return s.app.ChatApplictaion.Chat(stream)
 }

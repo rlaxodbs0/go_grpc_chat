@@ -26,6 +26,7 @@ type Client struct {
 	username string
 	password string
 	pb.ChatTaskClient
+	ctx context.Context
 }
 
 func (cl *Client) session() {
@@ -33,6 +34,7 @@ func (cl *Client) session() {
 		"login": cl.login,
 		"logout": cl.logout,
 		"signup": cl.signup,
+		"search": cl.search,
 	}
 	for {
 		fmt.Printf("GRPCHAT >>> ")
@@ -46,7 +48,7 @@ func (cl *Client) session() {
 	}
 }
 
-func (cl *Client)signup() {
+func (cl *Client) signup() {
 	var username, password string
 	fmt.Printf("username: ")
 	fmt.Scanln(&username)
@@ -102,6 +104,17 @@ func (cl *Client) logout() {
 	if r.Response == pb.ResponseType_SUCCESS {
 		log.Printf("Goodbye! %s\n", username)
 	}
+}
+
+func (cl *Client) search() {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+	r, err := cl.ChatTaskClient.Search(ctx, &pb.UserInfo{})
+	if err != nil {
+		log.Fatalf("%v occured", err)
+	}
+	log.Printf("%s\n", r)
+
 }
 
 func (cl *Client)chatSession(ctx context.Context) {
