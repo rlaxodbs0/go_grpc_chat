@@ -5,10 +5,10 @@ import (
 )
 
 type Application struct {
-	*AuthApplictaion
-	*ChatApplictaion
+	*AuthApplication
+	*ChatApplication
 }
 
-func InitApplictaion(repo repository.ChatRepositoryImpl) *Application{
-	return &Application{AuthApplictaion: InitAuthApplictaion(repo), ChatApplictaion: InitChatApplictaion(repo)}
+func InitApplication(repo repository.ChatRepositoryImpl) *Application{
+	return &Application{AuthApplication: InitAuthApplictaion(repo), ChatApplication: InitChatApplication(repo)}
 }

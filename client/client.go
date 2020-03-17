@@ -26,6 +26,7 @@ type Client struct {
 	username string
 	password string
 	pb.ChatTaskClient
+	ctx context.Context
 }
 
 func (cl *Client) session() {
@@ -33,6 +34,7 @@ func (cl *Client) session() {
 		"login": cl.login,
 		"logout": cl.logout,
 		"signup": cl.signup,
+		"search": cl.search,
 	}
 	for {
 		fmt.Printf("GRPCHAT >>> ")
@@ -46,7 +48,7 @@ func (cl *Client) session() {
 	}
 }
 
-func (cl *Client)signup() {
+func (cl *Client) signup() {
 	var username, password string
 	fmt.Printf("username: ")
 	fmt.Scanln(&username)
@@ -104,8 +106,19 @@ func (cl *Client) logout() {
 	}
 }
 
-func (cl *Client)chatSession(ctx context.Context) {
+func (cl *Client) search() {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+	r, err := cl.ChatTaskClient.Search(ctx, &pb.UserInfo{})
+	if err != nil {
+		log.Fatalf("%v occured", err)
+	}
+	log.Printf("%s\n", r)
+
+}
+
+func (cl *Client)chatSession(ctx context.Context) {
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	stream, err := cl.ChatTaskClient.Chat(ctx)
 	if err != nil {
@@ -149,13 +162,13 @@ func (cl *Client) receive(stream pb.ChatTask_ChatClient) error {
 		} else if err == io.EOF {
 			return nil
 		} else if err != nil {
+			log.Println(err)
 			return err
 		}
 		switch evt := res.Event.(type) {
 		case *pb.Message_BroadcastMessage_:
-			log.Printf("BROADCAST %v %v", res.Username, evt.BroadcastMessage.Message)
+			log.Printf("%v: %v", res.Username, evt.BroadcastMessage.Message)
 		default:
-			log.Println("hi")
 		}
 	}
 }
