@@ -1,7 +1,6 @@
 package model
 
 import (
-	"go_grpc_chat/pb"
 	"time"
 )
 
@@ -11,8 +10,7 @@ type User struct {
 	Password string
 	GroupIDSlice []uint64
 	FriendIDSlice []uint64
-	*Status
-	Session pb.ChatTask_ChatServer
+	Status Status
 }
 
 type Status struct {

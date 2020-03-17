@@ -3,7 +3,6 @@ package application
 import (
 	"fmt"
 	"go_grpc_chat/pb"
-	"go_grpc_chat/server/chat/domain/model"
 	"go_grpc_chat/server/chat/domain/repository"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -12,7 +11,7 @@ import (
 	"sync"
 )
 
-type ChatApplictaion struct{
+type ChatApplication struct{
 	broadcast chan *pb.Message
 	inviteMessage chan *pb.Message
 	message chan *pb.Message
@@ -20,9 +19,9 @@ type ChatApplictaion struct{
 	repository repository.ChatRepositoryImpl
 }
 
-func InitChatApplictaion(repo repository.ChatRepositoryImpl) *ChatApplictaion{
+func InitChatApplication(repo repository.ChatRepositoryImpl) *ChatApplication{
 	log.Print("init chat app")
-	return &ChatApplictaion{
+	return &ChatApplication{
 		broadcast: make(chan *pb.Message, 1000),
 		inviteMessage: make(chan *pb.Message, 1000),
 		message: make(chan *pb.Message, 1000),
@@ -30,26 +29,25 @@ func InitChatApplictaion(repo repository.ChatRepositoryImpl) *ChatApplictaion{
 		repository: repo}
 }
 
-func (s *ChatApplictaion) Search(in *pb.UserInfo) map[string]string{
+func (s *ChatApplication) Search(in *pb.UserInfo) map[string]string{
 	userMap := map[string]string{}
-	s.userSession.Range(func(k, session interface{}) bool {
-		if session.(*model.User).Active {
-			userMap[session.(*model.User).Username] = fmt.Sprintf("Login at %s", session.(*model.User).LoginTime)
-		}
-		return true
-	})
+	activeUserPointerSlice := s.repository.GetActiveUserPointerSlice(in.Username)
+	fmt.Println(activeUserPointerSlice)
+	for _, v := range activeUserPointerSlice {
+		userMap[v.Username] = fmt.Sprintf("Login at %s", v.Status.LoginTime)
+	}
 	return userMap
 }
 
 
-func (s *ChatApplictaion) Chat(stream pb.ChatTask_ChatServer) error {
+func (s *ChatApplication) Chat(stream pb.ChatTask_ChatServer) error {
 	req, _:= stream.Recv()
 	_, ok := s.userSession.Load(req.Username); if !ok{
 		s.userSession.Store(req.Username, stream)
 	}
 	defer s.closeStream(req.Username)
 
-	go s.Broadcast(stream)
+	go s.Broadcast()
 	for{
 		req, err := stream.Recv()
 		if s, ok := status.FromError(err); ok && s.Code() == codes.Canceled {
@@ -61,13 +59,13 @@ func (s *ChatApplictaion) Chat(stream pb.ChatTask_ChatServer) error {
 		}
 		switch evt := req.Event.(type) {
 		case *pb.Message_BroadcastMessage_:
-			log.Printf("Broadcast: %v", req.Username)
+			log.Printf("%v's broadcast", req.Username)
 			s.broadcast <- req
 		case *pb.Message_ChatMessage:
-			log.Printf("%v", req.Username)
+			log.Printf("%v's chat", req.Username)
 			s.message <- req
 		case *pb.Message_InviteMessage_:
-			log.Printf("Invite: %v", req.Username)
+			log.Printf("%v's invite", req.Username)
 			s.inviteMessage <- req
 		default:
 			log.Printf("%v", evt)
@@ -77,32 +75,30 @@ func (s *ChatApplictaion) Chat(stream pb.ChatTask_ChatServer) error {
 	return stream.Context().Err()
 }
 
-func (s *ChatApplictaion) Broadcast(stream pb.ChatTask_ChatServer){
+func (s *ChatApplication) Broadcast(){
 	for {
 		select {
-		case <- stream.Context().Done():
-			return
 		case res := <- s.broadcast:
-			if r, ok := status.FromError(stream.Send(res)); ok {
-				switch r.Code() {
-				case codes.OK:
-					s.userSession.Range(func(k, session interface{}) bool {
-						session.(*model.User).Session.Send(res)
-						return true
-					})
-				case codes.Unavailable, codes.Canceled, codes.DeadlineExceeded:
-					log.Printf("client (%s) terminated connection", res.Username)
-					return
-				default:
-					return
+			s.userSession.Range(func(k, session interface{}) bool {
+				if k != res.Username {
+					if r, ok := status.FromError(session.(pb.ChatTask_ChatServer).Send(res)); ok {
+						switch r.Code() {
+						case codes.OK:
+							return true
+						case codes.Unavailable, codes.Canceled, codes.DeadlineExceeded:
+							log.Printf("client (%s) terminated connection", res.Username)
+							s.userSession.Delete(k)
+							return false
+						}
+					}
 				}
-			}
+				return true
+			})
 		}
 	}
 }
 
-
-func (s *ChatApplictaion) closeStream(username string) {
+func (s *ChatApplication) closeStream(username string) {
 	_, ok := s.userSession.Load(username); if ok{
 		s.userSession.Delete(username)
 	}

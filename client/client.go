@@ -167,9 +167,8 @@ func (cl *Client) receive(stream pb.ChatTask_ChatClient) error {
 		}
 		switch evt := res.Event.(type) {
 		case *pb.Message_BroadcastMessage_:
-			log.Printf("BROADCAST %v %v", res.Username, evt.BroadcastMessage.Message)
+			log.Printf("%v: %v", res.Username, evt.BroadcastMessage.Message)
 		default:
-			log.Println("hi")
 		}
 	}
 }

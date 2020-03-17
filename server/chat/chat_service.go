@@ -6,8 +6,6 @@ import (
 	"go_grpc_chat/server/chat/infrastructure"
 )
 
-func InitChatServer() {
-	port := ":4317"
-	handler.InitGrpcHandler(port,
-		application.InitApplictaion(infrastructure.NewStore()))
+func InitChatServer() *handler.ChatServer {
+	return handler.InitGrpcHandler(application.InitApplication(infrastructure.NewStore()))
 }
