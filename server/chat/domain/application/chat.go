@@ -7,20 +7,18 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"io"
-	"log"
 	"sync"
 )
 
-type ChatApplication struct{
+type ChatApplication struct {
 	broadcast chan *pb.Message
 	inviteMessage chan *pb.Message
 	message chan *pb.Message
-	userSession sync.Map  // username - *model.user
-	repository repository.ChatRepositoryImpl
+	userSession sync.Map
+	repository repository.UserRepositoryImpl
 }
 
-func InitChatApplication(repo repository.ChatRepositoryImpl) *ChatApplication{
-	log.Print("init chat app")
+func InitChatApplication(repo repository.UserRepositoryImpl) *ChatApplication {
 	return &ChatApplication{
 		broadcast: make(chan *pb.Message, 1000),
 		inviteMessage: make(chan *pb.Message, 1000),
@@ -57,18 +55,14 @@ func (s *ChatApplication) Chat(stream pb.ChatTask_ChatServer) error {
 		} else if err != nil {
 			return err
 		}
-		switch evt := req.Event.(type) {
+		switch req.Event.(type) {
 		case *pb.Message_BroadcastMessage_:
-			log.Printf("%v's broadcast", req.Username)
 			s.broadcast <- req
 		case *pb.Message_ChatMessage:
-			log.Printf("%v's chat", req.Username)
 			s.message <- req
 		case *pb.Message_InviteMessage_:
-			log.Printf("%v's invite", req.Username)
 			s.inviteMessage <- req
 		default:
-			log.Printf("%v", evt)
 		}
 	}
 	<-stream.Context().Done()
@@ -86,7 +80,6 @@ func (s *ChatApplication) Broadcast(){
 						case codes.OK:
 							return true
 						case codes.Unavailable, codes.Canceled, codes.DeadlineExceeded:
-							log.Printf("client (%s) terminated connection", res.Username)
 							s.userSession.Delete(k)
 							return false
 						}

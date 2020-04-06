@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"go_grpc_chat/client/test"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"io"
@@ -174,7 +175,8 @@ func (cl *Client) receive(stream pb.ChatTask_ChatClient) error {
 }
 
 func main() {
-	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock(),
+		grpc.WithUnaryInterceptor(test.LogUnaryClientInterceptor),)
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
