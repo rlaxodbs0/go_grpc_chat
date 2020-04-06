@@ -4,15 +4,13 @@ import (
 	"go_grpc_chat/pb"
 	"go_grpc_chat/server/chat/domain/model"
 	"go_grpc_chat/server/chat/domain/repository"
-	"log"
 )
 
 type AuthApplication struct{
-	repository repository.ChatRepositoryImpl
+	repository repository.UserRepositoryImpl
 }
 
-func InitAuthApplictaion(repo repository.ChatRepositoryImpl) *AuthApplication{
-	log.Print("init auth app")
+func InitAuthApplication(repo repository.UserRepositoryImpl) *AuthApplication{
 	return &AuthApplication{repository: repo}
 }
 

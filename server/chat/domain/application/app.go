@@ -9,6 +9,6 @@ type Application struct {
 	*ChatApplication
 }
 
-func InitApplication(repo repository.ChatRepositoryImpl) *Application{
-	return &Application{AuthApplication: InitAuthApplictaion(repo), ChatApplication: InitChatApplication(repo)}
+func InitApplication(userRepo repository.UserRepositoryImpl) *Application{
+	return &Application{AuthApplication: InitAuthApplication(userRepo), ChatApplication: InitChatApplication(userRepo)}
 }

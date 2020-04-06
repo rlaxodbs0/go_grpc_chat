@@ -5,7 +5,7 @@ import (
 	"go_grpc_chat/server/chat/domain/model"
 )
 
-type ChatRepositoryImpl interface  {
+type UserRepositoryImpl interface  {
 	GetUserByUsername(username string) *model.User
 	SignUp(user *model.User) *pb.SignupResponse
 	Login(user *model.User) *pb.LoginResponse

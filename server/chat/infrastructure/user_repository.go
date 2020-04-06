@@ -11,19 +11,18 @@ type DB struct{
 	UserInfo sync.Map // string - model user
 }
 
-type ChatRepository struct {
+type UserRepository struct {
 	db *DB
 }
 
-func NewStore() *ChatRepository {
+func NewStore() *UserRepository {
 	userInfo := sync.Map{}
-	userInfo.Store("a", &model.User{Username:"a", Password:"1"})
-	userInfo.Store("b", &model.User{Username:"b", Password:"1"})
-	userInfo.Store("c", &model.User{Username:"c", Password:"1"})
-	return &ChatRepository{db: &DB{UserInfo: userInfo}}
+	userInfo.Store("g1", &model.User{Username:"g1", Password:"g1"})
+	userInfo.Store("g2", &model.User{Username:"g2", Password:"g2"})
+	return &UserRepository{db: &DB{UserInfo: userInfo}}
 }
 
-func (ar *ChatRepository) SignUp(user *model.User) *pb.SignupResponse {
+func (ar *UserRepository) SignUp(user *model.User) *pb.SignupResponse {
 	_, ok := ar.db.UserInfo.Load(user.Username); if ok {
 		return &pb.SignupResponse{Response:pb.ResponseType_ALREADYEXISTS}
 	}
@@ -31,7 +30,7 @@ func (ar *ChatRepository) SignUp(user *model.User) *pb.SignupResponse {
 	return &pb.SignupResponse{Response:pb.ResponseType_SUCCESS}
 }
 
-func (ar *ChatRepository) Login(user *model.User) *pb.LoginResponse {
+func (ar *UserRepository) Login(user *model.User) *pb.LoginResponse {
 	res, ok := ar.db.UserInfo.Load(user.Username); if !ok {
 		return &pb.LoginResponse{Response:pb.ResponseType_NOMATCH}
 	}
@@ -43,7 +42,7 @@ func (ar *ChatRepository) Login(user *model.User) *pb.LoginResponse {
 	return &pb.LoginResponse{Response:pb.ResponseType_SUCCESS}
 }
 
-func (ar *ChatRepository) Logout(user *model.User) *pb.LogoutResponse {
+func (ar *UserRepository) Logout(user *model.User) *pb.LogoutResponse {
 	res, ok := ar.db.UserInfo.Load(user.Username); if !ok {
 		return &pb.LogoutResponse{Response:pb.ResponseType_NOMATCH}
 	}
@@ -52,15 +51,15 @@ func (ar *ChatRepository) Logout(user *model.User) *pb.LogoutResponse {
 	return &pb.LogoutResponse{Response:pb.ResponseType_SUCCESS}
 }
 
-func (ar *ChatRepository) GetUserByUsername(username string) *model.User{
+func (ar *UserRepository) GetUserByUsername(username string) *model.User{
 	res, ok := ar.db.UserInfo.Load(username); if ok {
 		return res.(*model.User)
 	}
 	return nil
 }
 
-func (ar *ChatRepository) GetActiveUserPointerSlice(username string) []*model.User{
-	activeUserPointerSlice := []*model.User{}
+func (ar *UserRepository) GetActiveUserPointerSlice(username string) []*model.User{
+	var activeUserPointerSlice []*model.User
 	ar.db.UserInfo.Range(func(k, user interface{}) bool {
 		if user.(*model.User).Status.Active {
 			activeUserPointerSlice = append(activeUserPointerSlice, user.(*model.User))
