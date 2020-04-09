@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go_grpc_chat/pb"
 	"go_grpc_chat/server/chat/domain/repository"
+	"go_grpc_chat/server/chat/infrastructure"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"io"
@@ -15,21 +16,28 @@ type ChatApplication struct {
 	inviteMessage chan *pb.Message
 	message chan *pb.Message
 	userSession sync.Map
-	repository repository.UserRepositoryImpl
+	ur repository.UserRepositoryImpl
+	gr repository.GroupRepositoryImpl
 }
 
-func InitChatApplication(repo repository.UserRepositoryImpl) *ChatApplication {
-	return &ChatApplication{
+func InitChatApplication(repo infrastructure.Repositories) *ChatApplication {
+	s := &ChatApplication{
 		broadcast: make(chan *pb.Message, 1000),
 		inviteMessage: make(chan *pb.Message, 1000),
 		message: make(chan *pb.Message, 1000),
 		userSession:sync.Map{},
-		repository: repo}
+		ur: repo.User,
+		gr: repo.Group,
+	}
+
+	go s.Broadcast()
+	go s.Message()
+	return s
 }
 
 func (s *ChatApplication) Search(in *pb.UserInfo) map[string]string{
 	userMap := map[string]string{}
-	activeUserPointerSlice := s.repository.GetActiveUserPointerSlice(in.Username)
+	activeUserPointerSlice := s.ur.GetActiveUserPointerSlice(in.Username)
 	fmt.Println(activeUserPointerSlice)
 	for _, v := range activeUserPointerSlice {
 		userMap[v.Username] = fmt.Sprintf("Login at %s", v.Status.LoginTime)
@@ -87,6 +95,21 @@ func (s *ChatApplication) Broadcast(){
 				}
 				return true
 			})
+		}
+	}
+}
+
+
+func (s *ChatApplication) Message(){
+	for {
+		select {
+		case res := <-s.message:
+			g, _ := s.gr.GetGroupByID(res.Event.(*pb.Message_ChatMessage).ChatMessage.ChatGroup)
+			for username := range g.UsernameList {
+				if v, ok := s.userSession.Load(username); ok {
+					status.FromError(v.(pb.ChatTask_ChatServer).Send(res))
+				}
+			}
 		}
 	}
 }

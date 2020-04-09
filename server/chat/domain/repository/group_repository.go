@@ -1,7 +1,11 @@
 package repository
 
-import "go_grpc_chat/server/chat/domain/model"
+import (
+	"go_grpc_chat/server/chat/domain/model"
+)
 
 type GroupRepositoryImpl interface  {
-	GetGroupByID(id uint64) *model.Group
+	GetGroupByID(id uint64) (*model.Group, error)
+	CreateGroup(group *model.Group) (uint64, error)
+	DeleteGroupByID(id uint64) error
 }

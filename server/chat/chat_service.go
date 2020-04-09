@@ -7,5 +7,5 @@ import (
 )
 
 func InitChatServer() *handler.ChatServer {
-	return handler.InitGrpcHandler(application.InitApplication(infrastructure.NewStore()))
+	return handler.InitGrpcHandler(application.InitApplication(infrastructure.NewUserRepository()))
 }

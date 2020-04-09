@@ -11,4 +11,5 @@ type UserRepositoryImpl interface  {
 	Login(user *model.User) *pb.LoginResponse
 	Logout(user *model.User) *pb.LogoutResponse
 	GetActiveUserPointerSlice(username string) []*model.User
+	UpdateUser(user *model.User) error
 }
