@@ -1,71 +1,102 @@
 package infrastructure
 
 import (
-	"go_grpc_chat/pb"
+	"fmt"
+	"github.com/jinzhu/gorm"
 	"go_grpc_chat/server/chat/domain/model"
-	"sync"
-	"time"
+	"go_grpc_chat/server/chat/domain/repository"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
-type DB struct{
-	UserInfo sync.Map // string - model user
+const (
+	DBName = "grpc_chat"
+)
+
+type userRepository struct {
+	db *gorm.DB
 }
 
-type UserRepository struct {
-	db *DB
-}
+var _ repository.UserRepositoryImpl = &userRepository{} //interface impl
 
-func NewStore() *UserRepository {
-	userInfo := sync.Map{}
-	userInfo.Store("g1", &model.User{Username:"g1", Password:"g1"})
-	userInfo.Store("g2", &model.User{Username:"g2", Password:"g2"})
-	return &UserRepository{db: &DB{UserInfo: userInfo}}
-}
-
-func (ar *UserRepository) SignUp(user *model.User) *pb.SignupResponse {
-	_, ok := ar.db.UserInfo.Load(user.Username); if ok {
-		return &pb.SignupResponse{Response:pb.ResponseType_ALREADYEXISTS}
+func NewUserRepository() repository.UserRepositoryImpl {
+	db, err := gorm.Open("sqlite3", "user_db")
+	if err != nil {
+		fmt.Println("storage err: ", err)
 	}
-	ar.db.UserInfo.Store(user.Username, &model.User{ Username:user.Username, Password:user.Password})
-	return &pb.SignupResponse{Response:pb.ResponseType_SUCCESS}
+	db.DB().SetMaxIdleConns(3)
+	db.LogMode(true)
+	AutoMigrate(db)
+	return &userRepository{db:db}
 }
 
-func (ar *UserRepository) Login(user *model.User) *pb.LoginResponse {
-	res, ok := ar.db.UserInfo.Load(user.Username); if !ok {
-		return &pb.LoginResponse{Response:pb.ResponseType_NOMATCH}
-	}
-	if res.(*model.User).Password != user.Password {
-		return &pb.LoginResponse{Response:pb.ResponseType_NOMATCH}
-	}
-	res.(*model.User).Status.Active = true
-	res.(*model.User).Status.LoginTime = time.Now()
-	return &pb.LoginResponse{Response:pb.ResponseType_SUCCESS}
+func AutoMigrate(db *gorm.DB) {
+	db.AutoMigrate(&model.User{})
 }
 
-func (ar *UserRepository) Logout(user *model.User) *pb.LogoutResponse {
-	res, ok := ar.db.UserInfo.Load(user.Username); if !ok {
-		return &pb.LogoutResponse{Response:pb.ResponseType_NOMATCH}
+func (ur *userRepository) CreateUser(user *model.User) error {
+	tx := ur.db.Begin()
+	if err := tx.Error; err != nil {
+		return err
 	}
-	res.(*model.User).Status.Active = false
-	res.(*model.User).Status.LogoutTime = time.Now()
-	return &pb.LogoutResponse{Response:pb.ResponseType_SUCCESS}
+	if err := tx.Create(&user).Error; err != nil {
+		return err
+	}
+	if err := tx.Where("username=?",user.Username).Find(&user).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
 }
 
-func (ar *UserRepository) GetUserByUsername(username string) *model.User{
-	res, ok := ar.db.UserInfo.Load(username); if ok {
-		return res.(*model.User)
+func (ur *userRepository) UpdateUser(user *model.User) error {
+	tx := ur.db.Begin()
+	if err := tx.Error; err != nil {
+		return err
 	}
-	return nil
+	if err := tx.Model(user).Update(user).Error; err != nil {
+		return err
+	}
+	if err := tx.Where("username=?", user.Username).Find(user).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
 }
 
-func (ar *UserRepository) GetActiveUserPointerSlice(username string) []*model.User{
-	var activeUserPointerSlice []*model.User
-	ar.db.UserInfo.Range(func(k, user interface{}) bool {
-		if user.(*model.User).Status.Active {
-			activeUserPointerSlice = append(activeUserPointerSlice, user.(*model.User))
+func (ur *userRepository) DeleteUser(user *model.User) error {
+	return ur.db.Delete(user).Error
+}
+
+func (ur *userRepository) GetUserByUsername(username string) (*model.User, error) {
+	var m model.User
+	err := ur.db.Where("username=?", username).Preload("Friends").Find(&m).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, nil
 		}
-		return true
-	})
-	return activeUserPointerSlice
+		return nil, err
+	}
+	return &m, err
 }
 
+func (ur *userRepository) AddFriend(user *model.User, friend *model.User) error{
+	tx := ur.db.Begin()
+	if err := tx.Error; err != nil {
+		return err
+	}
+	if err := tx.Model(user).Association("Friends").Find(friend).Error; err != nil {
+		return err
+	}
+	if err := tx.Model(user).Association("Friends").Append(friend).Error; err != nil {
+		return err
+	}
+	if err := tx.Where("username=?", friend.Username).Preload("User").First(friend).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
+}
+
+func (ur *userRepository) RemoveFriend(user *model.User, friend *model.User) error{
+	return ur.db.Model(user).Association("Friends").Delete(friend).Error
+}

@@ -6,37 +6,48 @@ import (
 	//grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"go_grpc_chat/pb"
 	app "go_grpc_chat/server/chat/domain/application"
-	"log"
 )
 
+/*
+	rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+    rpc Login(LoginRequest) returns (LoginResponse) {}
+    rpc Logout(LogoutRequest) returns (LogoutResponse) {}
+    rpc AddFriend(AddFriendRequest) returns (AddFriendResponse) {}
+    rpc RemoveFriend(RemoveFriendRequest) returns (RemoveFriendResponse) {}
+    rpc GetFriends(GetFriendsRequest) returns (GetFriendsResponse) {}
+    rpc Chat(stream Message) returns (stream Message) {}
+ */
 
-func InitGrpcHandler( app *app.Application) *ChatServer{
-	return &ChatServer{app: app}
-}
 
 type ChatServer struct {
-	pb.UnimplementedChatTaskServer
-	app *app.Application
+	pb.UnimplementedChatServiceServer
 }
 
-func (s *ChatServer) SignUp(ctx context.Context, info *pb.UserInfo) (*pb.SignupResponse, error){
-	log.Printf("%v signup", info.Username)
-	return s.app.AuthApplication.SignUp(info), nil
+func (s *ChatServer) CreateUser(ctx context.Context, request *pb.CreateUserRequest) (*pb.CreateUserResponse, error){
+	return app.UserApplication().CreateUser(ctx, request)
 }
 
-func (s *ChatServer) Login(ctx context.Context, info *pb.UserInfo) (*pb.LoginResponse, error) {
-	return s.app.AuthApplication.Login(info), nil
+func (s *ChatServer) Login(ctx context.Context, request *pb.LoginRequest) (*pb.LoginResponse, error) {
+	return app.UserApplication().Login(ctx, request)
 }
 
-func (s *ChatServer) Logout(ctx context.Context, info *pb.UserInfo) (*pb.LogoutResponse, error) {
-	return s.app.AuthApplication.Logout(info), nil
+func (s *ChatServer) Logout(ctx context.Context, request *pb.LogoutRequest) (*pb.LogoutResponse, error) {
+	return app.UserApplication().Logout(ctx, request)
 }
 
-func (s * ChatServer) Search(ctx context.Context, info *pb.UserInfo) (*pb.UserList, error) {
-	return &pb.UserList{UserNameActiveMap: s.app.ChatApplication.Search(info)}, nil
+func (s * ChatServer) AddFriend(ctx context.Context, request *pb.AddFriendRequest) (*pb.AddFriendResponse, error) {
+	return app.UserApplication().AddFriend(ctx, request)
 }
 
-func (s * ChatServer) Chat(stream pb.ChatTask_ChatServer) error {
-	return s.app.ChatApplication.Chat(stream)
+func (s * ChatServer) RemoveFriend(ctx context.Context, request *pb.RemoveFriendRequest) (*pb.RemoveFriendResponse, error) {
+	return app.UserApplication().RemoveFriend(ctx, request)
+}
+
+func (s * ChatServer) GetFriends(ctx context.Context, request *pb.GetFriendsRequest) (*pb.GetFriendsResponse, error) {
+	return app.UserApplication().GetFriends(ctx, request)
+}
+
+func (s * ChatServer) Chat(stream pb.ChatService_ChatServer) error {
+	return app.ChatApplication().Chat(stream)
 }
 

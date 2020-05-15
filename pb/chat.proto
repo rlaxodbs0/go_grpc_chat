@@ -9,60 +9,94 @@ import "google/protobuf/timestamp.proto";
 enum ResponseType {
     SUCCESS = 0;
     FAIL = 1;
-    ALREADYEXISTS = 2;
-    NOMATCH = 3;
 }
 
-service chat_task {
-    rpc SignUp(UserInfo) returns (SignupResponse) {}
-    rpc Login(UserInfo) returns (LoginResponse) {}
-    rpc Logout(UserInfo) returns (LogoutResponse) {}
-    rpc Search(UserInfo) returns (UserList) {}
+service ChatService {
+    rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+    rpc Login(LoginRequest) returns (LoginResponse) {}
+    rpc Logout(LogoutRequest) returns (LogoutResponse) {}
+    rpc AddFriend(AddFriendRequest) returns (AddFriendResponse) {}
+    rpc RemoveFriend(RemoveFriendRequest) returns (RemoveFriendResponse) {}
+    rpc GetFriends(GetFriendsRequest) returns (GetFriendsResponse) {}
     rpc Chat(stream Message) returns (stream Message) {}
 }
 
-message UserInfo{
+message UserInfo {
     string username = 1;
     string password = 2;
+}
+
+message CreateUserRequest {
+    UserInfo userInfo = 1;
+}
+
+message CreateUserResponse {
+    ResponseType response = 1;
+}
+
+message LoginRequest {
+    UserInfo userInfo = 1;
 }
 
 message LoginResponse {
     ResponseType response = 1;
 }
 
+message LogoutRequest {
+    UserInfo userInfo = 1;
+}
+
 message LogoutResponse {
     ResponseType response = 1;
 }
 
-message SignupResponse {
+message AddFriendRequest {
+    UserInfo userInfo = 1;
+    string friend = 2;
+}
+
+message AddFriendResponse {
     ResponseType response = 1;
 }
 
+message RemoveFriendRequest {
+    UserInfo userInfo = 1;
+    string friend = 2;
+}
+
+message RemoveFriendResponse {
+    ResponseType response = 1;
+}
+
+message GetFriendsRequest {
+    UserInfo userInfo = 1;
+}
+
+message UserState {
+    string username = 1;
+    bool active = 2;
+    google.protobuf.Timestamp timestamp = 3;
+}
+
+message GetFriendsResponse {
+    repeated UserState users = 1;
+}
 
 message Message{
     google.protobuf.Timestamp timestamp = 1;
     string username = 2;
 
     oneof event {
-        Message  chat_message  = 3;
-        InviteMessage invite_message = 4;
-        BroadcastMessage broadcast_message = 5;
+        Message  message  = 3;
+        BroadcastMessage broadcastMessage = 4;
     }
 
     message Message {
-        string chat_group = 2;
+        string target = 2;
         string message = 3;
-    }
-
-    message InviteMessage {
-        string target_username = 2;
     }
 
     message BroadcastMessage {
         string message = 2;
     }
-}
-
-message UserList{
-    map<string, string> UserNameActiveMap = 1;
 }
