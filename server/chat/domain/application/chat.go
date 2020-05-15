@@ -1,59 +1,42 @@
 package application
 
 import (
-	"fmt"
 	"go_grpc_chat/pb"
-	"go_grpc_chat/server/chat/domain/repository"
-	"go_grpc_chat/server/chat/infrastructure"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"io"
 	"sync"
 )
 
-type ChatApplication struct {
+type chatApplication struct {
 	broadcast chan *pb.Message
-	inviteMessage chan *pb.Message
 	message chan *pb.Message
 	userSession sync.Map
-	ur repository.UserRepositoryImpl
-	gr repository.GroupRepositoryImpl
 }
 
-func InitChatApplication(repo infrastructure.Repositories) *ChatApplication {
-	s := &ChatApplication{
-		broadcast: make(chan *pb.Message, 1000),
-		inviteMessage: make(chan *pb.Message, 1000),
-		message: make(chan *pb.Message, 1000),
-		userSession:sync.Map{},
-		ur: repo.User,
-		gr: repo.Group,
+var ChatApplicationInstance *chatApplication
+
+func init (){
+	ChatApplicationInstance = &chatApplication{
+		broadcast:   make(chan *pb.Message, 1000),
+		message:     make(chan *pb.Message, 1000),
+		userSession: sync.Map{},
 	}
-
-	go s.Broadcast()
-	go s.Message()
-	return s
-}
-
-func (s *ChatApplication) Search(in *pb.UserInfo) map[string]string{
-	userMap := map[string]string{}
-	activeUserPointerSlice := s.ur.GetActiveUserPointerSlice(in.Username)
-	fmt.Println(activeUserPointerSlice)
-	for _, v := range activeUserPointerSlice {
-		userMap[v.Username] = fmt.Sprintf("Login at %s", v.Status.LoginTime)
-	}
-	return userMap
+	go ChatApplicationInstance.Broadcast()
+	go ChatApplicationInstance.Message()
 }
 
 
-func (s *ChatApplication) Chat(stream pb.ChatTask_ChatServer) error {
+func ChatApplication() *chatApplication {
+	return ChatApplicationInstance
+}
+
+func (s *chatApplication) Chat(stream pb.ChatService_ChatServer) error {
 	req, _:= stream.Recv()
 	_, ok := s.userSession.Load(req.Username); if !ok{
 		s.userSession.Store(req.Username, stream)
 	}
 	defer s.closeStream(req.Username)
-
-	go s.Broadcast()
 	for{
 		req, err := stream.Recv()
 		if s, ok := status.FromError(err); ok && s.Code() == codes.Canceled {
@@ -66,10 +49,8 @@ func (s *ChatApplication) Chat(stream pb.ChatTask_ChatServer) error {
 		switch req.Event.(type) {
 		case *pb.Message_BroadcastMessage_:
 			s.broadcast <- req
-		case *pb.Message_ChatMessage:
+		case *pb.Message_Message_:
 			s.message <- req
-		case *pb.Message_InviteMessage_:
-			s.inviteMessage <- req
 		default:
 		}
 	}
@@ -77,13 +58,13 @@ func (s *ChatApplication) Chat(stream pb.ChatTask_ChatServer) error {
 	return stream.Context().Err()
 }
 
-func (s *ChatApplication) Broadcast(){
+func (s *chatApplication) Broadcast(){
 	for {
 		select {
 		case res := <- s.broadcast:
 			s.userSession.Range(func(k, session interface{}) bool {
 				if k != res.Username {
-					if r, ok := status.FromError(session.(pb.ChatTask_ChatServer).Send(res)); ok {
+					if r, ok := status.FromError(session.(pb.ChatService_ChatServer).Send(res)); ok {
 						switch r.Code() {
 						case codes.OK:
 							return true
@@ -100,22 +81,19 @@ func (s *ChatApplication) Broadcast(){
 }
 
 
-func (s *ChatApplication) Message(){
+func (s *chatApplication) Message(){
 	for {
 		select {
 		case res := <-s.message:
-			g, _ := s.gr.GetGroupByID(res.Event.(*pb.Message_ChatMessage).ChatMessage.ChatGroup)
-			for username := range g.UsernameList {
-				if v, ok := s.userSession.Load(username); ok {
-					status.FromError(v.(pb.ChatTask_ChatServer).Send(res))
-				}
+			if v, ok := s.userSession.Load(res.Event.(*pb.Message_Message_).Message.Target); ok {
+				v.(pb.ChatService_ChatServer).Send(res)
 			}
 		}
 	}
 }
 
-func (s *ChatApplication) closeStream(username string) {
-	_, ok := s.userSession.Load(username); if ok{
+func (s *chatApplication) closeStream(username string) {
+	_, ok := s.userSession.Load(username); if ok {
 		s.userSession.Delete(username)
 	}
 }
